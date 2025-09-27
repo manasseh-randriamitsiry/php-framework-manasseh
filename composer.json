@@ -1,0 +1,15 @@
+{
+    "autoload": {
+        "files": [
+            "app/helpers.php"
+        ],
+        "classmap": [
+            "./"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Randriamitsiry valimbavaka manassé"
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+  <IfModule mod_negociation.c>
+    Options -Multiviews -Indexes
+  </IfModule>
+  RewriteEngine On
+  #Autorizaton header
+  RewriteCond %{HTTP:Autorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Autorization}]
+
+  # redirect trailing
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} (.+)/$
+  RewriteRule ^ %1 [L,R=301]
+
+  # process all requests through index.php, except for actually existing files
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>
