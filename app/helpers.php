@@ -2,6 +2,11 @@
 use App\App;
 use App\Environment;
 use App\Security;
+use App\Session;
+use App\Validator;
+use App\Responses\JsonResponse;
+use App\Responses\ViewResponse;
+use App\Responses\RedirectResponse;
 use Database\Connection;
 
 if (!function_exists('dd')){
@@ -31,59 +36,43 @@ if (!function_exists('connect')){
 
 if (!function_exists('view')){
     function view($view, $data = null){
-        // Extract data to variables if provided
-        if ($data && is_array($data)) {
-            extract($data);
-        }
-        
-        // Include CSRF token helper
-        $csrf_token = Security::generateCsrfToken();
-        $csrf_field = Security::csrfField();
-        
-        require "views/{$view}.php";
+        return new ViewResponse($view, $data);
+    }
+}
+
+if (!function_exists('json')){
+    function json($data = [], $status = 200) {
+        return new JsonResponse($data, $status);
     }
 }
 
 if (!function_exists('redirect')){
     function redirect($url, $statusCode = 302) {
-        header("Location: {$url}", true, $statusCode);
-        exit();
+        return new RedirectResponse($url, $statusCode);
+    }
+}
+
+if (!function_exists('back')){
+    function back() {
+        return RedirectResponse::back();
     }
 }
 
 if (!function_exists('old')){
     function old($key, $default = '') {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        return $_SESSION['old_input'][$key] ?? $default;
+        return Session::getOldInput($key, $default);
     }
 }
 
 if (!function_exists('flash')){
     function flash($key, $default = null) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (isset($_SESSION[$key])) {
-            $value = $_SESSION[$key];
-            unset($_SESSION[$key]);
-            return $value;
-        }
-        
-        return $default;
+        return Session::flash($key, $default);
     }
 }
 
 if (!function_exists('session')){
     function session($key, $default = null) {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        return $_SESSION[$key] ?? $default;
+        return Session::get($key, $default);
     }
 }
 
@@ -107,21 +96,7 @@ if (!function_exists('env')){
 
 if (!function_exists('config')){
     function config($key, $default = null) {
-        App::bind('config', require "config.php");
-        $config = App::get('config');
-        
-        $keys = explode('.', $key);
-        $value = $config;
-        
-        foreach ($keys as $k) {
-            if (isset($value[$k])) {
-                $value = $value[$k];
-            } else {
-                return $default;
-            }
-        }
-        
-        return $value;
+        return \App\Config::get($key, $default);
     }
 }
 
@@ -180,5 +155,104 @@ if (!function_exists('validate_csrf')){
         }
         
         return true;
+    }
+}
+
+if (!function_exists('validate')){
+    function validate($data, $rules, $messages = []) {
+        return Validator::validateData($data, $rules, $messages);
+    }
+}
+
+if (!function_exists('validator')){
+    function validator($data, $rules, $messages = []) {
+        return Validator::make($data, $rules, $messages);
+    }
+}
+
+if (!function_exists('response')){
+    function response($content = '', $status = 200, $headers = []) {
+        $response = new class($content, $status, $headers) extends \App\Response {
+            // Concrete implementation of abstract Response class
+        };
+        return $response;
+    }
+}
+
+if (!function_exists('request')){
+    function request() {
+        return \App\Request::getInstance();
+    }
+}
+
+if (!function_exists('auth_user')){
+    function auth_user() {
+        return Session::get('user_id');
+    }
+}
+
+if (!function_exists('is_logged_in')){
+    function is_logged_in() {
+        return Session::has('user_id') && !empty(Session::get('user_id'));
+    }
+}
+
+if (!function_exists('logout')){
+    function logout() {
+        Session::destroy();
+    }
+}
+
+if (!function_exists('login')){
+    function login($userId) {
+        Session::set('user_id', $userId);
+        Session::set('login_time', time());
+        Session::regenerate();
+    }
+}
+
+if (!function_exists('cache')){
+    function cache($key, $value = null, $ttl = 3600) {
+        if ($value === null) {
+            return \App\Cache::get($key);
+        }
+        return \App\Cache::put($key, $value, $ttl);
+    }
+}
+
+if (!function_exists('log_info')){
+    function log_info($message, $context = []) {
+        return \App\Logger::info($message, $context);
+    }
+}
+
+if (!function_exists('log_error')){
+    function log_error($message, $context = []) {
+        return \App\Logger::error($message, $context);
+    }
+}
+
+if (!function_exists('upload')){
+    function upload($fieldName, $config = []) {
+        $uploader = new \App\FileUpload($config);
+        return $uploader->upload($fieldName);
+    }
+}
+
+if (!function_exists('mail')){
+    function mail() {
+        return \App\Mail::create();
+    }
+}
+
+if (!function_exists('migrate')){
+    function migrate() {
+        return \Database\Migration::migrate();
+    }
+}
+
+if (!function_exists('rollback')){
+    function rollback($steps = 1) {
+        return \Database\Migration::rollback($steps);
     }
 }
